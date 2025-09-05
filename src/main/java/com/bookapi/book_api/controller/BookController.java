@@ -4,6 +4,9 @@ import com.bookapi.book_api.controller.generated.BooksApi;
 import com.bookapi.book_api.dto.generated.BookInput;
 import com.bookapi.book_api.dto.generated.BookListResponse;
 import com.bookapi.book_api.dto.generated.BookOutput;
+import com.bookapi.book_api.mapper.BookMapper;
+import com.bookapi.book_api.model.Book;
+import com.bookapi.book_api.service.BookService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +15,16 @@ import java.util.UUID;
 
 @RestController
 public class BookController implements BooksApi {
+
+    private final BookService bookService;
+    private final BookMapper bookMapper;
+
+    // Use constructor injection for all dependencies
+    public BookController (BookService bookService, BookMapper bookMapper) {
+        this.bookService = bookService;
+        this.bookMapper = bookMapper;
+    }
+
 
     @Override
     public ResponseEntity<BookOutput> addBook(BookInput bookInput) {
@@ -30,7 +43,12 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<BookOutput> getBookById(UUID bookId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the service function
+        Book foundBook = bookService.findBookById(bookId);
+        // Use the mapper to convert it to a public DTO
+        BookOutput bookOutput = bookMapper.toBookOutput(foundBook);
+        // Return the DTO with a 200 OK Status
+        return ResponseEntity.ok(bookOutput);
     }
 
     @Override

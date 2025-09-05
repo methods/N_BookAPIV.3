@@ -34,18 +34,6 @@ public class BookControllerIntegrationTest {
         bookRepository.deleteAll();
     }
 
-    @Test // (4)
-    @WithMockUser
-    void getBookById_whenEndpointExists_shouldReturn501NotImplemented() throws Exception {
-
-        // Arrange
-        UUID bookId = UUID.randomUUID();
-
-        // Act & Assert
-        mockMvc.perform(get("/books/{bookId}", bookId)) // (5)
-                .andExpect(status().isNotImplemented()); // (6)
-    }
-
     @Test
     @WithMockUser
     void getBookById_whenBookExists_shouldReturnBookDetails() throws Exception {
