@@ -4,6 +4,7 @@ package com.bookapi.book_api.controller;
 import com.bookapi.book_api.model.Book;
 import com.bookapi.book_api.repository.BookRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,35 +37,33 @@ public class BookControllerIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("GET /books/{id} returns 200 OK with book details for an existing book")
     void getBookById_whenBookExists_shouldReturnBookDetails() throws Exception {
-        // Arrange
-        // Create a book object, save it to the database
+        // GIVEN a book exists in the database
         Book testBook = new Book("The Hobbit", "J.R.R.Tolkien", "An Unexpected Journey");
         bookRepository.save(testBook);
 
-        // Act
-        // Make a GET request to the endpoint using the new book's id
-        mockMvc.perform(get("/books/{bookId}", testBook.getId()))
-                // Assert
-                // Expect HTTP 200 OK Status code
-                .andExpect(status().isOk())
-                // Expect the response JSON to contain the supplied title and author
+        // WHEN a request is made for that book's ID
+        var resultActions = mockMvc.perform(get("/books/{bookId}", testBook.getId()));
+
+        // THEN the response is successful and contains the correct data
+        resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("$.title", is("The Hobbit")))
                 .andExpect(jsonPath("$.author", is("J.R.R.Tolkien")));
-
     }
 
     @Test
     @WithMockUser
+    @DisplayName("GET /books/{id} returns 404 Not Found for a non-existent book")
     void getBookById_whenBookDoesNotExist_shouldReturn404NotFound() throws Exception {
-        // Arrange
-        // Create a random UUID that does not exist in the database
+        // GIVEN a book ID that does not exist in the database
         UUID nonExistentId = UUID.randomUUID();
 
-        // Act & Assert
-        // Perform the GET request and expect a 404 status.
-        mockMvc.perform(get("/books/{bookId}", nonExistentId))
-                .andExpect(status().isNotFound())
+        // WHEN a GET request is made for that book's ID
+        var resultActions = mockMvc.perform(get("/books/{bookId}", nonExistentId));
+
+        // THEN the response status is 404 Not Found and contains an error message
+        resultActions.andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", is("Book not found with id: " + nonExistentId)));
     }
 }
