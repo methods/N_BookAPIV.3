@@ -53,4 +53,18 @@ public class BookControllerIntegrationTest {
                 .andExpect(jsonPath("$.author", is("J.R.R.Tolkien")));
 
     }
+
+    @Test
+    @WithMockUser
+    void getBookById_whenBookDoesNotExist_shouldReturn404NotFound() throws Exception {
+        // Arrange
+        // Create a random UUID that does not exist in the database
+        UUID nonExistentId = UUID.randomUUID();
+
+        // Act & Assert
+        // Perform the GET request and expect a 404 status.
+        mockMvc.perform(get("/books/{bookId}", nonExistentId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", is("Book not found with id: " + nonExistentId)));
+    }
 }

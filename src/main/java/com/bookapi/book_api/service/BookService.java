@@ -1,5 +1,6 @@
 package com.bookapi.book_api.service;
 
+import com.bookapi.book_api.exception.ResourceNotFoundException;
 import com.bookapi.book_api.model.Book;
 import com.bookapi.book_api.repository.BookRepository;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,6 @@ public class BookService {
     public Book findBookById(UUID id) {
         // Use the repository to find the book
         return bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + id));
     }
 }
