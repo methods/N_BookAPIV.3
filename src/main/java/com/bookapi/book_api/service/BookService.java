@@ -1,5 +1,6 @@
 package com.bookapi.book_api.service;
 
+import com.bookapi.book_api.dto.generated.BookInput;
 import com.bookapi.book_api.exception.ResourceNotFoundException;
 import com.bookapi.book_api.model.Book;
 import com.bookapi.book_api.repository.BookRepository;
@@ -21,5 +22,16 @@ public class BookService {
         // Use the repository to find the book
         return bookRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + id));
+    }
+
+    public Book createBook(BookInput bookInput) {
+        // Create a new Book from the input DTO
+        Book newBook = new Book(
+                bookInput.getTitle(),
+                bookInput.getAuthor(),
+                bookInput.getSynopsis()
+        );
+        // Use the BookRepository's build in methods to save and return the saved book
+        return bookRepository.save(newBook);
     }
 }

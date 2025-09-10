@@ -10,7 +10,9 @@ import com.bookapi.book_api.service.BookService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -28,7 +30,18 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<BookOutput> addBook(BookInput bookInput) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the BookService method for adding a book
+        Book createdBook = bookService.createBook(bookInput);
+        // Build the URI to be returned with the 201 response
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdBook.getId())
+                .toUri();
+        // Use the mapper to convert it to a public DTO
+        BookOutput bookOutput = bookMapper.toBookOutput(createdBook);
+        // Return the DTO with a 201 Created Status
+        return ResponseEntity.created(location).body(bookOutput);
     }
 
     @Override
