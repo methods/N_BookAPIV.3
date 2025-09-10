@@ -66,6 +66,11 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<BookOutput> updateBook(UUID bookId, BookInput bookInput) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the service function
+        Book updatedBook = bookService.updateBook(bookId, bookInput);
+        // Use the mapper to convert it to a public DTO
+        BookOutput bookOutput = bookMapper.toBookOutput(updatedBook);
+        // Return the DTO with a 200 OK Status
+        return ResponseEntity.ok(bookOutput);
     }
 }

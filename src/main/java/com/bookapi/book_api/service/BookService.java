@@ -31,7 +31,20 @@ public class BookService {
                 bookInput.getAuthor(),
                 bookInput.getSynopsis()
         );
-        // Use the BookRepository's build in methods to save and return the saved book
+        // Use the BookRepository's built in methods to save and return the saved book
         return bookRepository.save(newBook);
+    }
+
+    public Book updateBook(UUID id, BookInput bookInput) {
+        // Find the book to be updated
+        Book bookToUpdate = findBookById(id);
+
+        // Update the fields on the book
+        bookToUpdate.setTitle(bookInput.getTitle());
+        bookToUpdate.setAuthor(bookInput.getAuthor());
+        bookToUpdate.setSynopsis(bookInput.getSynopsis());
+
+        // Use the BookRepository's built in methods to save and return the updated book
+        return bookRepository.save(bookToUpdate);
     }
 }

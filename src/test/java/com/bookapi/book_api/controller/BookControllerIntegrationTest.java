@@ -20,8 +20,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -98,5 +97,35 @@ public class BookControllerIntegrationTest {
         // THEN the response status is 404 Not Found and contains an error message
         resultActions.andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", is("Book not found with id: " + nonExistentId)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("PUT /books/{id} should update an existing book and return 200 OK")
+    void putBook_whenBookExists_shouldUpdateBookAndReturn200() throws Exception {
+        // GIVEN a book that exists in the database
+        Book existingBook = new Book("Original Title", "Original Author", "Original Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // AND a DTO with the updated details
+        BookInput updatedBookInput = new BookInput();
+        updatedBookInput.setTitle("Updated Title");
+        updatedBookInput.setAuthor("Updated Author");
+        updatedBookInput.setSynopsis("Updated Synopsis");
+        String updatedBookJson = objectMapper.writeValueAsString(updatedBookInput);
+
+        // WHEN a PUT request is made to that book's ID with the new details
+        var resultActions = mockMvc.perform(put("/books/{bookId}", bookId)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatedBookJson));
+
+        // THEN the response status should be  200 OK
+        resultActions.andExpect(status().isOk())
+                // AND the response body should contain the updated book details
+                .andExpect(jsonPath("$.id", is(bookId.toString())))
+                .andExpect(jsonPath("$.title", is("Updated Title")))
+                .andExpect(jsonPath("$.author", is("Updated Author")));
     }
 }
