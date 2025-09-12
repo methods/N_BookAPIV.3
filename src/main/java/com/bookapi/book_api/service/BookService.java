@@ -47,4 +47,14 @@ public class BookService {
         // Use the BookRepository's built in methods to save and return the updated book
         return bookRepository.save(bookToUpdate);
     }
+
+    public Book deleteBook(UUID id) {
+        // Find the book to be deleted
+        Book bookToDelete = findBookById(id);
+
+        // Delete the book from the database
+        bookRepository.delete(bookToDelete);
+
+        return bookToDelete;
+    }
 }

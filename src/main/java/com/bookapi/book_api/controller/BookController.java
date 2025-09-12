@@ -46,7 +46,10 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<Void> deleteBookById(UUID bookId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the service function
+        Book deletedBook = bookService.deleteBook(bookId);
+        // Return 204 No Content
+        return ResponseEntity.noContent().build();
     }
 
     @Override

@@ -128,4 +128,21 @@ public class BookControllerIntegrationTest {
                 .andExpect(jsonPath("$.title", is("Updated Title")))
                 .andExpect(jsonPath("$.author", is("Updated Author")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("DELETE /books/{id} should delete the book and return 204 No Content")
+    void deleteBook_whenBookExists_shouldDeleteBookAndReturn204() throws Exception {
+        // GIVEN a book that exists in the database
+        Book existingBook = new Book("To Be Deleted", "Deleted Author", "Deleted Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // WHEN a DELETE request is made to that book's ID
+        var resultActions = mockMvc.perform(delete("/books/{bookId}", bookId)
+                .with(csrf()));
+
+        // THEN the response status should be 204 No Content and the body is empty
+        resultActions.andExpect(status().isNoContent());
+    }
 }
