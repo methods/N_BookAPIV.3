@@ -115,9 +115,10 @@
                             <generatorName>spring</generatorName>
                             <generateApis>true</generateApis>
                             <generateModels>true</generateModels>
-                            <apiPackage>com.bookapi.bookapi.controller.generated</apiPackage>
-                            <modelPackage>com.bookapi.bookapi.dto.generated</modelPackage>
+                            <apiPackage>com.bookapi.book_api.controller.generated</apiPackage>
+                            <modelPackage>com.bookapi.book_api.dto.generated</modelPackage>
                             <configOptions>
+                                <useTags>true</useTags>
                                 <interfaceOnly>true</interfaceOnly>
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <useJakartaEe>true</useJakartaEe>
