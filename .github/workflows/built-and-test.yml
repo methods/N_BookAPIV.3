@@ -14,6 +14,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      # Label used to access the service container
+      mongodb:
+        # Docker image to use
+        image: mongo:latest
+        # Map port 27017 on the service container to port 27017 on the host runner
+        ports:
+          - 27017:27017
+
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout repository
