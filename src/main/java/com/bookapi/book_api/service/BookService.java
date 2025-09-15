@@ -4,6 +4,8 @@ import com.bookapi.book_api.dto.generated.BookInput;
 import com.bookapi.book_api.exception.ResourceNotFoundException;
 import com.bookapi.book_api.model.Book;
 import com.bookapi.book_api.repository.BookRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -22,6 +24,11 @@ public class BookService {
         // Use the repository to find the book
         return bookRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + id));
+    }
+
+    public Page<Book> findAllBooks(Pageable pageable) {
+        // Use the repository to find and return books in a List page format
+        return bookRepository.findAll(pageable);
     }
 
     public Book createBook(BookInput bookInput) {

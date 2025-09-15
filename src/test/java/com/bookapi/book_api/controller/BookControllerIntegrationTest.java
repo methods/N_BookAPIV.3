@@ -145,4 +145,27 @@ public class BookControllerIntegrationTest {
         // THEN the response status should be 204 No Content and the body is empty
         resultActions.andExpect(status().isNoContent());
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /books should return a paginated list of books")
+    void getAllBooks_whenBooksExist_shouldReturnPaginatedResponse() throws Exception {
+        // GIVEN that there are 15 books in the database
+        for (int i = 1; i <= 15; i++) {
+            bookRepository.save(new Book("Book Title " +i, "Author " +i, "Synopsis " +i));
+        }
+
+        // WHEN a request is made for the second page with size 5
+        var resultActions = mockMvc.perform(get("/books")
+                .param("offset", "5")
+                .param("limit", "5"));
+
+        // THEN the response status should be 200 OK and the body should contain the correct page of data
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCount", is(15)))
+                .andExpect(jsonPath("$.offset", is(5)))
+                .andExpect(jsonPath("$.limit", is(5)))
+                .andExpect(jsonPath("$.items.length()", is(5)))
+                .andExpect(jsonPath("$.items[0].title", is("Book Title 6")));
+    }
 }

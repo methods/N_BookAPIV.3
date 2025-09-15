@@ -7,6 +7,9 @@ import com.bookapi.book_api.dto.generated.BookOutput;
 import com.bookapi.book_api.mapper.BookMapper;
 import com.bookapi.book_api.model.Book;
 import com.bookapi.book_api.service.BookService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,7 +57,19 @@ public class BookController implements BooksApi {
 
     @Override
     public ResponseEntity<BookListResponse> getAllBooks(Integer offset, Integer limit) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Create a pageable object from offset and limit
+        // Calculate the page by dividing offset by limit
+        int page = limit > 0 ? offset / limit : 0; // If limit is passed as 0 or <0, set to 0
+        Pageable pageable = PageRequest.of(page, limit);
+
+        // Call the service function
+        Page<Book> bookPage = bookService.findAllBooks(pageable);
+
+        // Use the mapper to convert the Page to a list of DTOs
+        BookListResponse response = bookMapper.toBookListResponse(bookPage);
+
+        // Return 200 OK with the list
+        return ResponseEntity.ok(response);
     }
 
     @Override
