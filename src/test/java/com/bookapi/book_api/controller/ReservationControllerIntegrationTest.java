@@ -95,4 +95,29 @@ public class ReservationControllerIntegrationTest {
                 .andExpect(jsonPath("$.bookId", is(bookId.toString())))
                 .andExpect(jsonPath("$.userName", is(reservationUsername)));
     }
+
+    @Test
+    @WithMockUser(username = "test_user", roles = {"USER"})
+    @DisplayName("DELETE /reservations/{id} should delete the book and return 204 No Content")
+    void deleteReservation_whenReservationExists_shouldDeleteBookAndReturn204() throws Exception {
+        // GIVEN a book exists in the database
+        Book existingBook = new Book("A Book to Delete", "An Author", "Its Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // AND it has an existing reservation
+        String reservationUsername = "test_user";
+        Reservation existingReservation = new Reservation(bookId, reservationUsername);
+        reservationRepository.save(existingReservation);
+        UUID reservationId = existingReservation.getId();
+
+        // WHEN a DELETE request is made to the reservation endpoint
+        var resultActions = mockMvc.perform(delete(
+                "/books/{bookId}/reservations/{reservationId}",
+                bookId, reservationId)
+                .with(csrf()));
+
+        // THEN the response status should be 204 No Content and the body empty
+        resultActions.andExpect(status().isNoContent());
+    }
 }

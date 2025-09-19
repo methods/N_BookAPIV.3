@@ -41,4 +41,13 @@ public class ReservationService {
 
         return reservation;
     }
+
+    public Reservation deleteReservationById(UUID bookId, UUID reservationId) {
+        // Find the reservation to be deleted
+        Reservation reservationToDelete = findReservationById(bookId, reservationId);
+        // Delete the reservation from the database
+        reservationRepository.delete(reservationToDelete);
+
+        return reservationToDelete;
+    }
 }

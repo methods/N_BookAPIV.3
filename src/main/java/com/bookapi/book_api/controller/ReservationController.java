@@ -55,7 +55,11 @@ public class ReservationController implements ReservationsApi {
 
     @Override
     public ResponseEntity<ReservationOutput> cancelReservationById(UUID bookId, UUID reservationId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the service function
+        Reservation cancelledReservation = reservationService.deleteReservationById(bookId, reservationId);
+        // TODO: Log the cancelled Reservation once logging is set up
+        // Return 204 No Content
+        return ResponseEntity.noContent().build();
     }
 
     @Override
