@@ -60,7 +60,13 @@ public class ReservationController implements ReservationsApi {
 
     @Override
     public ResponseEntity<ReservationOutput> getReservationById(UUID bookId, UUID reservationId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Call the service function
+        Reservation userReservation = reservationService.findReservationById(bookId, reservationId);
+
+        // Map the reservation to a public DTO
+        ReservationOutput reservationOutput = reservationMapper.toReservationOutput(userReservation);
+        // Return the DTO with a 200 OK Status
+        return ResponseEntity.ok(reservationOutput);
     }
 
     @Override
