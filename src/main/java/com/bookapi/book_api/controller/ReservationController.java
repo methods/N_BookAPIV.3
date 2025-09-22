@@ -5,6 +5,9 @@ import com.bookapi.book_api.dto.generated.ReservationOutput;
 import com.bookapi.book_api.mapper.ReservationMapper;
 import com.bookapi.book_api.model.Reservation;
 import com.bookapi.book_api.service.ReservationService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,6 +20,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 public class ReservationController implements ReservationsApi {
@@ -75,7 +79,29 @@ public class ReservationController implements ReservationsApi {
 
     @Override
     public ResponseEntity<List<ReservationOutput>> listReservations(UUID userId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // Manually construct the Pageable object for now
+        // TODO: Refactor this endpoint to align with proper pagination practices.
+        // The current openapi.yml contract is flawed:
+        // 1. It's missing pagination parameters (e.g., offset, limit). We are using hardcoded defaults.
+        // 2. The response should be a structured object (like BookListResponse), not a raw list.
+        // 3. The `userId` parameter is currently ignored for non-admin users.
+        // This should be addressed when the full security model is implemented.
+        final int page = 0;
+        final int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Get the username from the security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+
+        // Call the service function
+        Page<Reservation> reservationPage = reservationService.findReservationsForUser(currentUserName, pageable);
+
+        // Map the Pageable object to a list
+        List <ReservationOutput> dtoList = reservationPage.getContent().stream()
+                .map(reservationMapper::toReservationOutput)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtoList);
     }
 }
 

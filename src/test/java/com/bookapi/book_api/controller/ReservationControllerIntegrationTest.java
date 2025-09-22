@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -119,5 +120,27 @@ public class ReservationControllerIntegrationTest {
 
         // THEN the response status should be 204 No Content and the body empty
         resultActions.andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(username = "user_one")
+    @DisplayName("GET /reservations should return only the authenticated user's reservations- ]")
+    void listReservations_whenCalledByUser_shouldReturnOnlyTheirReservations() throws Exception {
+        // GIVEN a book exists in the database
+        Book existingBook = new Book("A Book to Delete", "An Author", "Its Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // AND more than one user has an existing reservation for it
+        reservationRepository.save(new Reservation(bookId, "user_one"));
+        reservationRepository.save(new Reservation(bookId, "user_two"));
+
+        // WHEN a GET request is made to the /reservations endpoint
+        var resultActions = mockMvc.perform(get("/reservations"));
+
+        // THEN the response is 200 OK and is a list only containing the reservation for user_one
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].userName", is("user_one")));
     }
 }

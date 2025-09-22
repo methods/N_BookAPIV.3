@@ -4,6 +4,8 @@ import com.bookapi.book_api.exception.BadResourceException;
 import com.bookapi.book_api.exception.ResourceNotFoundException;
 import com.bookapi.book_api.model.Reservation;
 import com.bookapi.book_api.repository.ReservationRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -49,5 +51,9 @@ public class ReservationService {
         reservationRepository.delete(reservationToDelete);
 
         return reservationToDelete;
+    }
+
+    public Page<Reservation> findReservationsForUser(String userName, Pageable pageable) {
+        return reservationRepository.findByUserName(userName, pageable);
     }
 }
