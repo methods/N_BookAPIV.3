@@ -10,27 +10,27 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class CustomOAuth2UserServiceTest {
+class CustomOidcUserServiceTest {
 
     @Mock // Creates a mock (fake) UserRepository
     private UserRepository userRepository;
 
     @InjectMocks // Creates an instance of our service and injects the mock repository into it
-    private CustomOAuth2UserService customOAuth2UserService;
+    private CustomOidcUserService customOidcUserService;
 
     @Mock // Mock the inputs to the user service
-    private OAuth2UserRequest userRequest;
+    private OidcUserRequest userRequest;
 
     @Mock
-    private OAuth2User oAuth2User;
+    private OidcUser oidcUser;
 
     @BeforeEach
     void setUp () {
@@ -46,11 +46,11 @@ class CustomOAuth2UserServiceTest {
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
         // AND their details are returned by the OAuth2 provider
-        when(oAuth2User.getAttribute("email")).thenReturn(email);
-        when(oAuth2User.getAttribute("name")).thenReturn(name);
+        when(oidcUser.getEmail()).thenReturn(email);
+        when(oidcUser.getName()).thenReturn(name);
 
         // WHEN the processUserRegistration method is called
-        customOAuth2UserService.processUserRegistration(oAuth2User);
+        customOidcUserService.processUserRegistration(oidcUser);
 
         // THEN the user should be saved to the database with their details and role set as USER
         ArgumentCaptor<User> userArgumentCaptor = ArgumentCaptor.forClass(User.class);
@@ -72,11 +72,11 @@ class CustomOAuth2UserServiceTest {
 
         // AND their details are returned by the OAuth2 provider with a new name
         String newNameFromGoogle = "New Name From Google";
-        when(oAuth2User.getAttribute("email")).thenReturn(email);
-        when(oAuth2User.getAttribute("name")).thenReturn(newNameFromGoogle);
+        when(oidcUser.getEmail()).thenReturn(email);
+        when(oidcUser.getName()).thenReturn(newNameFromGoogle);
 
         // WHEN the processUserRegistration method is called
-        customOAuth2UserService.processUserRegistration(oAuth2User);
+        customOidcUserService.processUserRegistration(oidcUser);
 
         // THEN the existing user object should be saved with the updated name
         ArgumentCaptor<User> userArgumentCaptor = ArgumentCaptor.forClass(User.class);
