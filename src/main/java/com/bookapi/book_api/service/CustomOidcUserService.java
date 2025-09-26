@@ -35,6 +35,11 @@ public class CustomOidcUserService extends OidcUserService {
         // Get the attributes from the OidcUser object
         String email = oidcUser.getEmail();
         String name = oidcUser.getName();
+        // If the Name field is blank, oidcUser resorts to using the OIDC 'sub' field which
+        // contains google id and should not be stored
+        if (name == null || name.isBlank() || name.matches("\\d+")) {
+            name = email.split("@")[0];
+        }
         System.out.println("Email from OIDC: " + email + ", Name: " + name);
 
         // Find the user in the database or create a new user document
