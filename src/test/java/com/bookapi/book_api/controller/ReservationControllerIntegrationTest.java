@@ -2,9 +2,12 @@ package com.bookapi.book_api.controller;
 
 
 import com.bookapi.book_api.model.Book;
+import com.bookapi.book_api.model.CustomOAuth2User;
 import com.bookapi.book_api.model.Reservation;
+import com.bookapi.book_api.model.User;
 import com.bookapi.book_api.repository.BookRepository;
 import com.bookapi.book_api.repository.ReservationRepository;
+import com.bookapi.book_api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,6 +26,8 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,16 +47,19 @@ public class ReservationControllerIntegrationTest {
     private ReservationRepository reservationRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @AfterEach
     void tearDown() {
         reservationRepository.deleteAll();
         bookRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
-    @WithMockUser(username = "test_user", roles = {"USER"})
     @DisplayName("POST /reservations should create a new reservation in the collection and return it with 201 Status")
     void postReservation_whenBookExists_andUserIsAuthenticated_shouldCreateReservation() throws Exception {
         // GIVEN a book exists in the database
@@ -57,20 +67,29 @@ public class ReservationControllerIntegrationTest {
         bookRepository.save(existingBook);
         UUID bookId = existingBook.getId();
 
+        // AND an existing user
+        User testUser = new User("tester@test.com", "Test User", "ROLE_USER");
+        userRepository.save(testUser);
+
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), testUser);
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()
+        );
+
         // WHEN a POST request is made to the reservations endpoint
         var resultActions = mockMvc.perform(post("/books/{bookId}/reservations", bookId)
-                .with(csrf()));
+                .with(authentication(auth)));
 
         // THEN the response should be 201 Created
         resultActions.andExpect(status().isCreated())
                 // AND the response body should contain the new Reservation document
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.bookId", is(bookId.toString())))
-                .andExpect(jsonPath("$.userName", is("test_user")));
+                .andExpect(jsonPath("$.userId", is(testUser.getId().toString())));
     }
 
     @Test
-    @WithMockUser(username = "test_user", roles = {"USER"})
     @DisplayName("GET /reservations/{id} returns 200 OK and the document for an existing reservation")
     void getReservationById_whenReservationExists_shouldReturnReservationDetails() throws Exception {
         // GIVEN a book exists in the database
@@ -78,9 +97,18 @@ public class ReservationControllerIntegrationTest {
         bookRepository.save(existingBook);
         UUID bookId = existingBook.getId();
 
-        // AND it has an existing reservation
-        String reservationUsername = "test_user";
-        Reservation existingReservation = new Reservation(bookId, reservationUsername);
+        // AND an existing user
+        User testUser = new User("tester@test.com", "Test User", "ROLE_USER");
+        userRepository.save(testUser);
+
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), testUser);
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()
+        );
+
+        // AND a reservation for the book by this user
+        Reservation existingReservation = new Reservation(bookId, testUser.getId());
         reservationRepository.save(existingReservation);
         UUID reservationId = existingReservation.getId();
 
@@ -88,13 +116,15 @@ public class ReservationControllerIntegrationTest {
         var resultActions = mockMvc.perform(get(
                 "/books/{bookId}/reservations/{reservationId}",
                 bookId, reservationId
-                ));
+                )
+                .with(authentication(auth))
+        );
 
         // THEN the response should be 200 OK and contain the reservation in the body
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(reservationId.toString())))
                 .andExpect(jsonPath("$.bookId", is(bookId.toString())))
-                .andExpect(jsonPath("$.userName", is(reservationUsername)));
+                .andExpect(jsonPath("$.userId", is(testUser.getId().toString())));
     }
 
     @Test
@@ -106,9 +136,18 @@ public class ReservationControllerIntegrationTest {
         bookRepository.save(existingBook);
         UUID bookId = existingBook.getId();
 
-        // AND it has an existing reservation
-        String reservationUsername = "test_user";
-        Reservation existingReservation = new Reservation(bookId, reservationUsername);
+        // AND an existing user
+        User testUser = new User("tester@test.com", "Test User", "ROLE_USER");
+        userRepository.save(testUser);
+
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), testUser);
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()
+        );
+
+        // AND a reservation for the book by this user
+        Reservation existingReservation = new Reservation(bookId, testUser.getId());
         reservationRepository.save(existingReservation);
         UUID reservationId = existingReservation.getId();
 
@@ -116,7 +155,7 @@ public class ReservationControllerIntegrationTest {
         var resultActions = mockMvc.perform(delete(
                 "/books/{bookId}/reservations/{reservationId}",
                 bookId, reservationId)
-                .with(csrf()));
+                .with(authentication(auth)));
 
         // THEN the response status should be 204 No Content and the body empty
         resultActions.andExpect(status().isNoContent());
@@ -131,16 +170,30 @@ public class ReservationControllerIntegrationTest {
         bookRepository.save(existingBook);
         UUID bookId = existingBook.getId();
 
-        // AND more than one user has an existing reservation for it
-        reservationRepository.save(new Reservation(bookId, "user_one"));
-        reservationRepository.save(new Reservation(bookId, "user_two"));
+        // AND two existing users in the database
+        User userOne = new User("one@example.com", "User One", "ROLE_USER");
+        userRepository.save(userOne);
+        User userTwo = new User("two@example.com", "User Two", "ROLE_USER");
+        userRepository.save(userTwo);
+
+        // AND each user has a reservation
+        reservationRepository.save(new Reservation(bookId, userOne.getId()));
+        reservationRepository.save(new Reservation(bookId, userTwo.getId()));
+
+        // AND user one is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), userOne);
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()
+        );
 
         // WHEN a GET request is made to the /reservations endpoint
-        var resultActions = mockMvc.perform(get("/reservations"));
+        var resultActions = mockMvc.perform(get("/reservations")
+                .with(authentication(auth))
+        );
 
-        // THEN the response is 200 OK and is a list only containing the reservation for user_one
+        // THEN the response is 200 OK and is a list only containing the reservation for user one
         resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].userName", is("user_one")));
+                .andExpect(jsonPath("$.items.length()", is(1)))
+                .andExpect(jsonPath("$.items[0].userId", is(userOne.getId().toString())));
     }
 }

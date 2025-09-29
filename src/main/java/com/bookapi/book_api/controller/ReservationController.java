@@ -1,8 +1,10 @@
 package com.bookapi.book_api.controller;
 
 import com.bookapi.book_api.controller.generated.ReservationsApi;
+import com.bookapi.book_api.dto.generated.ReservationListResponse;
 import com.bookapi.book_api.dto.generated.ReservationOutput;
 import com.bookapi.book_api.mapper.ReservationMapper;
+import com.bookapi.book_api.model.CustomOAuth2User;
 import com.bookapi.book_api.model.Reservation;
 import com.bookapi.book_api.service.ReservationService;
 import org.springframework.data.domain.Page;
@@ -41,10 +43,14 @@ public class ReservationController implements ReservationsApi {
         if (authentication == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
-        String currentUser = authentication.getName();
+
+        // Cast the principal to our Custom User type to get the full user object
+        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        // Get the userId from the cast principal object
+        UUID userId = customOAuth2User.getLocalUser().getId();
 
         // Call the ReservationService method for creating a reservation
-        Reservation createdReservation = reservationService.addReservation(bookId, currentUser);
+        Reservation createdReservation = reservationService.addReservation(bookId, userId);
         // Build the URI to be returned with the 201 response
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -78,30 +84,29 @@ public class ReservationController implements ReservationsApi {
     }
 
     @Override
-    public ResponseEntity<List<ReservationOutput>> listReservations(UUID userId) {
-        // Manually construct the Pageable object for now
-        // TODO: Refactor this endpoint to align with proper pagination practices.
-        // The current openapi.yml contract is flawed:
-        // 1. It's missing pagination parameters (e.g., offset, limit). We are using hardcoded defaults.
-        // 2. The response should be a structured object (like BookListResponse), not a raw list.
-        // 3. The `userId` parameter is currently ignored for non-admin users.
-        // This should be addressed when the full security model is implemented.
-        final int page = 0;
-        final int size = 20;
-        Pageable pageable = PageRequest.of(page, size);
+    public ResponseEntity<ReservationListResponse> listReservations(Integer offset, Integer limit, UUID userId) {
+        // Create a pageable object from offset and limit
+        // Calculate the page by dividing offset by limit
+        int page = limit > 0 ? offset / limit : 0; // If limit is passed as 0 or <0, set to 0
+        Pageable pageable = PageRequest.of(page, limit);
 
         // Get the username from the security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUserName = authentication.getName();
+        if (authentication == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        // Cast the principal to our Custom User type to get the full user object
+        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        // Get the userId from the cast principal object
+        UUID currentUserId = customOAuth2User.getLocalUser().getId();
 
         // Call the service function
-        Page<Reservation> reservationPage = reservationService.findReservationsForUser(currentUserName, pageable);
+        Page<Reservation> reservationPage = reservationService.findReservationsForUser(currentUserId, pageable);
 
         // Map the Pageable object to a list
-        List <ReservationOutput> dtoList = reservationPage.getContent().stream()
-                .map(reservationMapper::toReservationOutput)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtoList);
+        ReservationListResponse responseDto = reservationMapper.toReservationListResponse(reservationPage);
+        return ResponseEntity.ok(responseDto);
     }
 }
 

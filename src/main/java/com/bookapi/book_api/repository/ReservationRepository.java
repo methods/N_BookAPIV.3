@@ -10,5 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface ReservationRepository extends MongoRepository<Reservation, UUID> {
-    Page<Reservation> findByUserName(String userName, Pageable pageable);
+    Page<Reservation> findByUserId(UUID userId, Pageable pageable);
 }

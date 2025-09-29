@@ -3,7 +3,9 @@ package com.bookapi.book_api.controller;
 
 import com.bookapi.book_api.dto.generated.BookInput;
 import com.bookapi.book_api.model.Book;
+import com.bookapi.book_api.model.User;
 import com.bookapi.book_api.repository.BookRepository;
+import com.bookapi.book_api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,8 +18,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -33,6 +37,9 @@ public class BookControllerIntegrationTest {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -167,5 +174,30 @@ public class BookControllerIntegrationTest {
                 .andExpect(jsonPath("$.limit", is(5)))
                 .andExpect(jsonPath("$.items.length()", is(5)))
                 .andExpect(jsonPath("$.items[0].title", is("Book Title 6")));
+    }
+
+    @Test
+    @DisplayName("Temporary Test: Verify UserRepository can save and find a user")
+    void userRepository_shouldSaveAndFindUser() {
+        // GIVEN a new user object
+        User newUser = new User("test-user@example.com", "Test User", "ROLE_TEST");
+
+        // WHEN we save the user
+        userRepository.save(newUser);
+        System.out.println("Saved user with ID: " + newUser.getId());
+
+        // AND WHEN we try to find the user by that ID
+        Optional<User> foundUserOptional = userRepository.findById(newUser.getId());
+
+        // THEN the user should be found
+        assertThat(foundUserOptional).isPresent();
+
+        // AND the found user's email should match
+        assertThat(foundUserOptional.get().getEmail()).isEqualTo("test-user@example.com");
+
+        System.out.println("Successfully found user: " + foundUserOptional.get().getEmail());
+
+        // Clean up this specific user
+        userRepository.deleteById(newUser.getId());
     }
 }

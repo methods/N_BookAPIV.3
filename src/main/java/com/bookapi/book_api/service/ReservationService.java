@@ -19,11 +19,11 @@ public class ReservationService {
         this.reservationRepository = reservationRepository;
     }
 
-    public Reservation addReservation(UUID bookId, String userName) {
+    public Reservation addReservation(UUID bookId, UUID userId) {
         // Create a new Reservation from the arguments
         Reservation newReservation = new Reservation(
                 bookId,
-                userName
+                userId
         );
         // Use the repository's built in methods to save and return the new Reservation
         return reservationRepository.save(newReservation);
@@ -53,7 +53,7 @@ public class ReservationService {
         return reservationToDelete;
     }
 
-    public Page<Reservation> findReservationsForUser(String userName, Pageable pageable) {
-        return reservationRepository.findByUserName(userName, pageable);
+    public Page<Reservation> findReservationsForUser(UUID userId, Pageable pageable) {
+        return reservationRepository.findByUserId(userId, pageable);
     }
 }
