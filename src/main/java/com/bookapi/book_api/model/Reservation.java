@@ -16,14 +16,14 @@ public class Reservation {
     @Id
     private UUID id;
     private UUID bookId;
-    private String userName;
+    private UUID userId;
     private String state;
     private Instant reservedAt;
 
-    public Reservation(UUID bookId, String userName) {
+    public Reservation(UUID bookId, UUID userId) {
         this.id = UUID.randomUUID();
         this.bookId = bookId;
-        this.userName = userName;
+        this.userId = userId;
         this.state = "Reserved";
         this.reservedAt = Instant.now();
     }
