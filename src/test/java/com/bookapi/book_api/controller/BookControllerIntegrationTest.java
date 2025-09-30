@@ -3,6 +3,7 @@ package com.bookapi.book_api.controller;
 
 import com.bookapi.book_api.dto.generated.BookInput;
 import com.bookapi.book_api.model.Book;
+import com.bookapi.book_api.model.CustomOAuth2User;
 import com.bookapi.book_api.model.User;
 import com.bookapi.book_api.repository.BookRepository;
 import com.bookapi.book_api.repository.UserRepository;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -23,6 +26,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,19 +55,24 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName(("POST /books should create a new book in the database and return 201"))
-    void postBook_whenBookIsValid_shouldCreateBookAndReturn201() throws Exception {
-        // GIVEN a DTO representing the request body
+    void postBook_whenBookIsValid_andUserIsAdmin_shouldCreateBookAndReturn201() throws Exception {
+        // GIVEN an admin user
+        User adminUser = new User("user@example.com", "Test User", "ROLE_ADMIN");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), adminUser);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        // AND a DTO representing the request body
         BookInput bookInput = new BookInput();
         bookInput.setTitle("Fahrenheit 451");
         bookInput.setAuthor("Ray Bradbury");
         bookInput.setSynopsis("A dystopian novel about a future society that burns books.");
-        // Convert the DTO to JSON to represent an incoming request
         String bookInputJson = objectMapper.writeValueAsString(bookInput);
 
         // WHEN a POST request is made with the appropriate request body
         var resultActions = mockMvc.perform(post("/books")
+                        .with(authentication(auth))
                         .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(bookInputJson));
@@ -72,6 +82,33 @@ public class BookControllerIntegrationTest {
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.title", is("Fahrenheit 451")))
                 .andExpect(jsonPath("$.author", is("Ray Bradbury")));
+    }
+
+    @Test
+    @DisplayName("POST /books should return 403 Forbidden for non-admin user")
+    void postBook_whenUserIsNotAdmin_shouldReturn403() throws Exception {
+        // GIVEN a non-admin user
+        User regularUser = new User("user@example.com", "Test User", "ROLE_USER");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), regularUser);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        // AND a DTO representing the request body
+        BookInput bookInput = new BookInput();
+        bookInput.setTitle("Fahrenheit 451");
+        bookInput.setAuthor("Ray Bradbury");
+        bookInput.setSynopsis("A dystopian novel about a future society that burns books.");
+        String bookInputJson = objectMapper.writeValueAsString(bookInput);
+
+        // WHEN a POST request is made with the appropriate request body
+        var resultActions = mockMvc.perform(post("/books")
+                .with(authentication(auth))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(bookInputJson));
+
+        // THEN the response should be 403 Forbidden
+        resultActions.andExpect(status().isForbidden());
     }
 
     @Test
