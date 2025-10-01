@@ -146,7 +146,49 @@ public class BookControllerIntegrationTest {
     @Test
     @WithMockUser
     @DisplayName("PUT /books/{id} should update an existing book and return 200 OK")
-    void putBook_whenBookExists_shouldUpdateBookAndReturn200() throws Exception {
+    void putBook_whenBookExists_andUserIsAdmin_shouldUpdateBookAndReturn200() throws Exception {
+        // GIVEN a book that exists in the database
+        Book existingBook = new Book("Original Title", "Original Author", "Original Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // AND an admin user
+        User adminUser = new User("user@example.com", "Test User", "ROLE_ADMIN");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), adminUser);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        // AND a DTO with the updated details
+        BookInput updatedBookInput = new BookInput();
+        updatedBookInput.setTitle("Updated Title");
+        updatedBookInput.setAuthor("Updated Author");
+        updatedBookInput.setSynopsis("Updated Synopsis");
+        String updatedBookJson = objectMapper.writeValueAsString(updatedBookInput);
+
+        // WHEN a PUT request is made to that book's ID with the new details
+        var resultActions = mockMvc.perform(put("/books/{bookId}", bookId)
+                .with(authentication(auth))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatedBookJson));
+
+        // THEN the response status should be  200 OK
+        resultActions.andExpect(status().isOk())
+                // AND the response body should contain the updated book details
+                .andExpect(jsonPath("$.id", is(bookId.toString())))
+                .andExpect(jsonPath("$.title", is("Updated Title")))
+                .andExpect(jsonPath("$.author", is("Updated Author")));
+    }
+
+    @Test
+    @DisplayName("PUT /books/{id} should return 403 Forbidden for a non-admin user")
+    void putBook_whenBookExists_andUserIsNotAdmin_shouldReturn403() throws Exception {
+        // GIVEN a non-admin user
+        User regularUser = new User("user@example.com", "Test User", "ROLE_USER");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), regularUser);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
         // GIVEN a book that exists in the database
         Book existingBook = new Book("Original Title", "Original Author", "Original Synopsis");
         bookRepository.save(existingBook);
@@ -161,16 +203,13 @@ public class BookControllerIntegrationTest {
 
         // WHEN a PUT request is made to that book's ID with the new details
         var resultActions = mockMvc.perform(put("/books/{bookId}", bookId)
+                .with(authentication(auth))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updatedBookJson));
 
-        // THEN the response status should be  200 OK
-        resultActions.andExpect(status().isOk())
-                // AND the response body should contain the updated book details
-                .andExpect(jsonPath("$.id", is(bookId.toString())))
-                .andExpect(jsonPath("$.title", is("Updated Title")))
-                .andExpect(jsonPath("$.author", is("Updated Author")));
+        // THEN the response should be 403 Forbidden
+        resultActions.andExpect(status().isForbidden());
     }
 
     @Test

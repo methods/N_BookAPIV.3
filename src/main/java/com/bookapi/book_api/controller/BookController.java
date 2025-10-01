@@ -85,6 +85,7 @@ public class BookController implements BooksApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookOutput> updateBook(UUID bookId, BookInput bookInput) {
         // Call the service function
         Book updatedBook = bookService.updateBook(bookId, bookInput);
