@@ -50,6 +50,7 @@ public class BookController implements BooksApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBookById(UUID bookId) {
         // Call the service function
         Book deletedBook = bookService.deleteBook(bookId);
