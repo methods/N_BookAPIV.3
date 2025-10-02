@@ -132,34 +132,44 @@ public class ReservationControllerIntegrationTest {
     @WithMockUser(username = "test_user", roles = {"USER"})
     @DisplayName("DELETE /reservations/{id} should delete the book and return 204 No Content")
     void deleteReservation_whenReservationExists_shouldDeleteBookAndReturn204() throws Exception {
-        // GIVEN a book exists in the database
-        Book existingBook = new Book("A Book to Delete", "An Author", "Its Synopsis");
-        bookRepository.save(existingBook);
-        UUID bookId = existingBook.getId();
-
-        // AND an existing user
-        User testUser = new User("tester@test.com", "Test User", "ROLE_USER");
-        userRepository.save(testUser);
+        // GIVEN a scenario with a book, an existing user, and a reservation by that user
+        var fixture = setUpMultiUserScenario();
 
         // AND that user is logged in
-        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), testUser);
-        var auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities()
-        );
-
-        // AND a reservation for the book by this user
-        Reservation existingReservation = new Reservation(bookId, testUser.getId());
-        reservationRepository.save(existingReservation);
-        UUID reservationId = existingReservation.getId();
+        var auth = createAuthenticationFor(fixture.userOne());
 
         // WHEN a DELETE request is made to the reservation endpoint
         var resultActions = mockMvc.perform(delete(
                 "/books/{bookId}/reservations/{reservationId}",
-                bookId, reservationId)
+                fixture.book().getId(),
+                fixture.reservationForUserOne().getId()
+                )
                 .with(authentication(auth)));
 
         // THEN the response status should be 204 No Content and the body empty
         resultActions.andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("DELETE /reservations/{id} returns 403 Forbidden if user is not the owner")
+    void deleteReservationById_whenUserIsNotOwner_shouldReturn403() throws Exception {
+        // GIVEN a scenario with a book, 2 existing users and a reservation by userOne
+        var fixture = setUpMultiUserScenario();
+
+        // AND userTwo (who does not own the reservation) is logged in
+        var auth = createAuthenticationFor(fixture.userTwo());
+
+        // WHEN a GET request is made to the reservation endpoint by the non-owner user
+        var resultActions = mockMvc.perform(delete(
+                        "/books/{bookId}/reservations/{reservationId}",
+                        fixture.book().getId(),
+                        fixture.reservationForUserOne().getId()
+                )
+                        .with(authentication(auth))
+        );
+
+        // THEN the result should be 403 Forbidden
+        resultActions.andExpect(status().isForbidden());
     }
 
     @Test

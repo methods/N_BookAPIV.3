@@ -65,6 +65,7 @@ public class ReservationController implements ReservationsApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN') or @reservationSecurityService.isReservationOwner(authentication, #reservationId)")
     public ResponseEntity<ReservationOutput> cancelReservationById(UUID bookId, UUID reservationId) {
         // Call the service function
         Reservation cancelledReservation = reservationService.deleteReservationById(bookId, reservationId);
