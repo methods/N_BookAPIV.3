@@ -35,6 +35,6 @@ public class ReservationSecurityService {
         UUID reservationOwner = currentReservation.getUserId();
 
         // Check if the userId matches that of the reservation
-        return reservationOwner == currentUserId;
+        return reservationOwner.equals(currentUserId);
     }
 }

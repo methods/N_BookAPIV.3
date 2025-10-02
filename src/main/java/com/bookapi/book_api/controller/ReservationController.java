@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -73,6 +74,7 @@ public class ReservationController implements ReservationsApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN') or @reservationSecurityService.isReservationOwner(authentication, #reservationId)")
     public ResponseEntity<ReservationOutput> getReservationById(UUID bookId, UUID reservationId) {
         // Call the service function
         Reservation userReservation = reservationService.findReservationById(bookId, reservationId);

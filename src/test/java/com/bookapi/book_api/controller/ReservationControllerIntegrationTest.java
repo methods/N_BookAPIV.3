@@ -128,6 +128,43 @@ public class ReservationControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /reservations/{id} returns 403 Forbidden if user is not the owner")
+    void getReservationById_whenUserIsNotOwner_shouldReturn403() throws Exception {
+        // GIVEN a book exists in the database
+        Book existingBook = new Book("A Book to Reserve", "An Author", "Its Synopsis");
+        bookRepository.save(existingBook);
+        UUID bookId = existingBook.getId();
+
+        // AND an existing user
+        User testUser = new User("tester@test.com", "Test User", "ROLE_USER");
+        userRepository.save(testUser);
+
+        // AND a reservation for the book by this user
+        Reservation existingReservation = new Reservation(bookId, testUser.getId());
+        reservationRepository.save(existingReservation);
+        UUID reservationId = existingReservation.getId();
+
+        // AND a different user
+        User notOwnerUser = new User("notowner@test.com", "Not Owner", "ROLE_USER");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), notOwnerUser);
+        var auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()
+        );
+
+        // WHEN a GET request is made to the reservation endpoint by the non-owner user
+        var resultActions = mockMvc.perform(get(
+                        "/books/{bookId}/reservations/{reservationId}",
+                        bookId, reservationId
+                )
+                        .with(authentication(auth))
+        );
+
+        // THEN the result should be 403 Forbidden
+        resultActions.andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(username = "test_user", roles = {"USER"})
     @DisplayName("DELETE /reservations/{id} should delete the book and return 204 No Content")
     void deleteReservation_whenReservationExists_shouldDeleteBookAndReturn204() throws Exception {
