@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -32,6 +33,7 @@ public class BookController implements BooksApi {
 
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookOutput> addBook(BookInput bookInput) {
         // Call the BookService method for adding a book
         Book createdBook = bookService.createBook(bookInput);
@@ -48,6 +50,7 @@ public class BookController implements BooksApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBookById(UUID bookId) {
         // Call the service function
         Book deletedBook = bookService.deleteBook(bookId);
@@ -83,6 +86,7 @@ public class BookController implements BooksApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookOutput> updateBook(UUID bookId, BookInput bookInput) {
         // Call the service function
         Book updatedBook = bookService.updateBook(bookId, bookInput);

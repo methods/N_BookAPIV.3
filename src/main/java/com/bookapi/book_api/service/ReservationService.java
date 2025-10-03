@@ -56,4 +56,8 @@ public class ReservationService {
     public Page<Reservation> findReservationsForUser(UUID userId, Pageable pageable) {
         return reservationRepository.findByUserId(userId, pageable);
     }
+
+    public Page<Reservation> findAllReservations(Pageable pageable) {
+        return reservationRepository.findAll(pageable);
+    }
 }

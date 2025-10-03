@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -64,6 +65,7 @@ public class ReservationController implements ReservationsApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN') or @reservationSecurityService.isReservationOwner(authentication, #reservationId)")
     public ResponseEntity<ReservationOutput> cancelReservationById(UUID bookId, UUID reservationId) {
         // Call the service function
         Reservation cancelledReservation = reservationService.deleteReservationById(bookId, reservationId);
@@ -73,6 +75,7 @@ public class ReservationController implements ReservationsApi {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN') or @reservationSecurityService.isReservationOwner(authentication, #reservationId)")
     public ResponseEntity<ReservationOutput> getReservationById(UUID bookId, UUID reservationId) {
         // Call the service function
         Reservation userReservation = reservationService.findReservationById(bookId, reservationId);
@@ -101,8 +104,24 @@ public class ReservationController implements ReservationsApi {
         // Get the userId from the cast principal object
         UUID currentUserId = customOAuth2User.getLocalUser().getId();
 
-        // Call the service function
-        Page<Reservation> reservationPage = reservationService.findReservationsForUser(currentUserId, pageable);
+        // Check if the logged in user is an admin
+        boolean isAdmin = customOAuth2User.getAuthorities().stream()
+                .anyMatch(grantedAuthority ->
+                        grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+        // Make a conditional call to the service function
+        Page<Reservation> reservationPage;
+
+        if (isAdmin) {
+            if (userId != null) {
+                reservationPage = reservationService.findReservationsForUser(userId, pageable);
+            } else {
+                reservationPage = reservationService.findAllReservations(pageable);
+            }
+        } else {
+            // For a regular user, ignore any query parameter
+            reservationPage = reservationService.findReservationsForUser(currentUserId, pageable);
+        }
 
         // Map the Pageable object to a list
         ReservationListResponse responseDto = reservationMapper.toReservationListResponse(reservationPage);
