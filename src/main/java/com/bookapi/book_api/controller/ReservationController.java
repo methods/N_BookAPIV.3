@@ -104,8 +104,24 @@ public class ReservationController implements ReservationsApi {
         // Get the userId from the cast principal object
         UUID currentUserId = customOAuth2User.getLocalUser().getId();
 
-        // Call the service function
-        Page<Reservation> reservationPage = reservationService.findReservationsForUser(currentUserId, pageable);
+        // Check if the logged in user is an admin
+        boolean isAdmin = customOAuth2User.getAuthorities().stream()
+                .anyMatch(grantedAuthority ->
+                        grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+        // Make a conditional call to the service function
+        Page<Reservation> reservationPage;
+
+        if (isAdmin) {
+            if (userId != null) {
+                reservationPage = reservationService.findReservationsForUser(userId, pageable);
+            } else {
+                reservationPage = reservationService.findAllReservations(pageable);
+            }
+        } else {
+            // For a regular user, ignore any query parameter
+            reservationPage = reservationService.findReservationsForUser(currentUserId, pageable);
+        }
 
         // Map the Pageable object to a list
         ReservationListResponse responseDto = reservationMapper.toReservationListResponse(reservationPage);

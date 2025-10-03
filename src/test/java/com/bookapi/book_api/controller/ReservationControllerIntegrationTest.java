@@ -173,39 +173,114 @@ public class ReservationControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "user_one")
     @DisplayName("GET /reservations should return only the authenticated user's reservations- ]")
     void listReservations_whenCalledByUser_shouldReturnOnlyTheirReservations() throws Exception {
-        // GIVEN a book exists in the database
-        Book existingBook = new Book("A Book to Delete", "An Author", "Its Synopsis");
-        bookRepository.save(existingBook);
-        UUID bookId = existingBook.getId();
+        // GIVEN a scenario with a book, two existing users, and a reservation by userOne
+        var fixture = setUpMultiUserScenario();
 
-        // AND two existing users in the database
-        User userOne = new User("one@example.com", "User One", "ROLE_USER");
-        userRepository.save(userOne);
-        User userTwo = new User("two@example.com", "User Two", "ROLE_USER");
-        userRepository.save(userTwo);
+        // AND userTwo also has a reservation for the book
+        reservationRepository.save(new Reservation(
+                fixture.book().getId(),
+                fixture.userTwo().getId()));
 
-        // AND each user has a reservation
-        reservationRepository.save(new Reservation(bookId, userOne.getId()));
-        reservationRepository.save(new Reservation(bookId, userTwo.getId()));
-
-        // AND user one is logged in
-        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), userOne);
-        var auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities()
-        );
+        // AND userOne is logged in
+        var auth = createAuthenticationFor(fixture.userOne());
 
         // WHEN a GET request is made to the /reservations endpoint
         var resultActions = mockMvc.perform(get("/reservations")
                 .with(authentication(auth))
         );
 
-        // THEN the response is 200 OK and is a list only containing the reservation for user one
+        // THEN the response is 200 OK and is a list only containing the reservation for userOne
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()", is(1)))
-                .andExpect(jsonPath("$.items[0].userId", is(userOne.getId().toString())));
+                .andExpect(jsonPath("$.items[0].userId", is(fixture.userOne().getId().toString())));
+    }
+
+    @Test
+    @DisplayName("GET /reservations?userId={userId} for an admin user should return the list of the user's reservations")
+    void listReservations_whenCalledByAdmin_shouldReturnQueriedUsersReservations() throws Exception {
+        // GIVEN a scenario with a book, two existing users, and a reservation by userOne
+        var fixture = setUpMultiUserScenario();
+
+        // AND userTwo also has a reservation for the book
+        reservationRepository.save(new Reservation(
+                fixture.book().getId(),
+                fixture.userTwo().getId()));
+
+        // AND an admin user
+        User adminUser = new User("admin@example.com", "Admin User", "ROLE_ADMIN");
+        userRepository.save(adminUser);
+        // AND the admin user is logged in
+        var auth = createAuthenticationFor(adminUser);
+
+        // WHEN a GET request is made to the /reservations?userId={userOne} endpoint
+        var resultActions = mockMvc.perform(get("/reservations")
+                        .param("userId", fixture.userOne().getId().toString())
+                        .with(authentication(auth))
+        );
+
+        // THEN the response is 200 OK and is a list only containing the reservation for userOne
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()", is(1)))
+                .andExpect(jsonPath("$.items[0].userId", is(fixture.userOne().getId().toString())));
+    }
+
+    @Test
+    @DisplayName("GET /reservations as an admin with no userId should return all reservations")
+    void listReservations_whenCalledByAdminWithoutUserId_shouldReturnAllReservations() throws Exception {
+        // GIVEN a scenario with a book, two existing users, and a reservation by userOne
+        var fixture = setUpMultiUserScenario();
+
+        // AND userTwo also has a reservation for the book
+        reservationRepository.save(new Reservation(
+                fixture.book().getId(),
+                fixture.userTwo().getId()));
+
+        // AND an admin user
+        User adminUser = new User("admin@example.com", "Admin User", "ROLE_ADMIN");
+        userRepository.save(adminUser);
+        // AND the admin user is logged in
+        var auth = createAuthenticationFor(adminUser);
+
+        // WHEN a GET request is made to the /reservations endpoint
+        var resultActions = mockMvc.perform(get("/reservations")
+                .with(authentication(auth))
+        );
+
+        // THEN the response is 200 OK and is a list containing all reservations
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCount", is(2)))
+                .andExpect(jsonPath("$.items.length()", is(2)));
+    }
+
+    @Test
+    @DisplayName("GET /reservations as an admin should support pagination")
+    void listReservations_whenCalledByAdmin_shouldBePaginated() throws Exception {
+        // GIVEN a scenario with a book, two existing users, and a reservation by userOne
+        var fixture = setUpMultiUserScenario();
+
+        // AND 2 more reservations
+        reservationRepository.save(new Reservation(fixture.book().getId(), fixture.userTwo().getId()));
+        reservationRepository.save(new Reservation(fixture.book().getId(), fixture.userOne().getId()));
+
+        // AND an admin user
+        User adminUser = new User("admin@example.com", "Admin User", "ROLE_ADMIN");
+        userRepository.save(adminUser);
+        // AND the admin user is logged in
+        var adminAuth = createAuthenticationFor(adminUser);
+
+        // WHEN the admin requests the second page with a size of 2
+        var resultActions = mockMvc.perform(get("/reservations")
+                .param("offset", "2")
+                .param("limit", "2")
+                .with(authentication(adminAuth))
+        );
+
+        // THEN the response is 200 OK and contains the correct paginated data
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCount", is(3)))
+                .andExpect(jsonPath("$.items.length()", is(1))); // The second page of size 2 should have only 1 item
     }
 
     private record TestUsersAndReservation(
