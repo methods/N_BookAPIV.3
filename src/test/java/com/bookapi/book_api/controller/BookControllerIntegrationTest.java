@@ -8,6 +8,7 @@ import com.bookapi.book_api.model.User;
 import com.bookapi.book_api.repository.BookRepository;
 import com.bookapi.book_api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -33,6 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Slf4j
 @SpringBootTest // (1)
 @AutoConfigureMockMvc // (2)
 public class BookControllerIntegrationTest {
@@ -125,7 +128,10 @@ public class BookControllerIntegrationTest {
         // THEN the response is successful and contains the correct data
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("$.title", is("The Hobbit")))
-                .andExpect(jsonPath("$.author", is("J.R.R.Tolkien")));
+                .andExpect(jsonPath("$.author", is("J.R.R.Tolkien")))
+                // HATEOAS links tests
+                .andExpect(jsonPath("$.links.self", endsWith("/books/" + testBook.getId())))
+                .andExpect(jsonPath("$.links.reservations", endsWith("/books/" + testBook.getId() + "/reservations")));
     }
 
     @Test
