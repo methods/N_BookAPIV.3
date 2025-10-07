@@ -1,6 +1,9 @@
 package com.bookapi.book_api.mapper;
 
 
+import com.bookapi.book_api.controller.BookController;
+import com.bookapi.book_api.controller.ReservationController;
+import com.bookapi.book_api.dto.generated.BookLinks;
 import com.bookapi.book_api.dto.generated.BookListResponse;
 import com.bookapi.book_api.dto.generated.BookOutput;
 import com.bookapi.book_api.model.Book;
@@ -9,6 +12,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Component
 public class BookMapper {
@@ -23,6 +29,21 @@ public class BookMapper {
         dto.setTitle(book.getTitle());
         dto.setAuthor(book.getAuthor());
         dto.setSynopsis(book.getSynopsis());
+
+        BookLinks links = new BookLinks();
+
+        links.setSelf(linkTo(methodOn(BookController.class)
+                .getBookById(book.getId()))
+                .withSelfRel()
+                .getHref());
+
+        links.setReservations(linkTo(methodOn(ReservationController.class)
+                .createReservation(book.getId()))
+                .withRel("reservations")
+                .getHref());
+
+        dto.setLinks(links);
+
         return dto;
     }
 
