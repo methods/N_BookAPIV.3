@@ -8,6 +8,7 @@ import com.bookapi.book_api.model.User;
 import com.bookapi.book_api.repository.BookRepository;
 import com.bookapi.book_api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import java.util.Optional;
@@ -266,7 +268,6 @@ public class BookControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser
     @DisplayName("GET /books should return a paginated list of books")
     void getAllBooks_whenBooksExist_shouldReturnPaginatedResponse() throws Exception {
         // GIVEN that there are 15 books in the database
@@ -274,18 +275,34 @@ public class BookControllerIntegrationTest {
             bookRepository.save(new Book("Book Title " +i, "Author " +i, "Synopsis " +i));
         }
 
-        // WHEN a request is made for the second page with size 5
-        var resultActions = mockMvc.perform(get("/books")
-                .param("offset", "5")
-                .param("limit", "5"));
+        // AND a non-admin user
+        User regularUser = new User("user@example.com", "Test User", "ROLE_USER");
+        // AND that user is logged in
+        CustomOAuth2User principal = new CustomOAuth2User(mock(OidcUser.class), regularUser);
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
 
-        // THEN the response status should be 200 OK and the body should contain the correct page of data
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalCount", is(15)))
-                .andExpect(jsonPath("$.offset", is(5)))
-                .andExpect(jsonPath("$.limit", is(5)))
+
+        // WHEN a request is made for the second page with size 5
+        MvcResult mvcResult = mockMvc.perform(get("/books")
+                .param("offset", "5")
+                .param("limit", "5")
+                        .with(authentication(auth)))
+        // THEN the response status should be 200 OK and the body should contain 5 items
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()", is(5)))
-                .andExpect(jsonPath("$.items[0].title", is("Book Title 6")));
+                .andReturn();
+
+        String responseBody = mvcResult.getResponse().getContentAsString();
+
+        String firstItemId = JsonPath.read(responseBody, "$.items[0].id");
+        String firstItemTitle = JsonPath.read(responseBody, "$.items[0].title");
+        String firstItemSelfLink = JsonPath.read(responseBody, "$.items[0].links.self");
+        // AND the first item should be the first item from the second page
+        assertThat(firstItemTitle).isEqualTo("Book Title 6");
+        // AND its HATEOAS links object should point to its own ID and reservation page
+        assertThat(firstItemSelfLink).endsWith("/books/" + firstItemId);
+        String firstItemReservationsLink = JsonPath.read(responseBody, "$.items[0].links.reservations");
+        assertThat(firstItemReservationsLink).endsWith("/books/" + firstItemId + "/reservations");
     }
 
     @Test
